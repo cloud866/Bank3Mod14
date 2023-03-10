@@ -1,29 +1,29 @@
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Bank {
 
-    private int money = 10000;
-    private Object lock = new Object();
+    private AtomicInteger money = new AtomicInteger();
 
     int getMoney() {
-        return money;
+        return money.get();
     }
 
     void take(int money) {
-        synchronized (lock) {
-            this.money -= money;
-        }
-
+        // безопасно уменьшаем
+        this.money.addAndGet(-money);
     }
 
     void repay(int money) {
-        synchronized (lock) {
-            this.money += money;
-        }
+        //безопасно увеличиваем
+        this.money.addAndGet(money);
     }
 
-    class Client extends Thread {
+    class Client extends Thread{
         @Override
         public void run() {
-            while (true) {
+            while(true) {
+                // выдаем кредит, только если
+                // есть свободные средства
                 if (getMoney() >= 1000) {
                     take(1000);
                     repay(1000);
@@ -33,17 +33,18 @@ public class Bank {
     }
 
     public Bank() {
-        new Client().start();
-        new Client().start();
-        new Client().start();
+        //устанавливаем начальное значение
+        money.set(10000);
+        for (int i = 0; i < 5; i++)
+            new Client().start();
+
     }
 
     public static void main(String[] args) throws InterruptedException {
         Bank bank = new Bank();
         while(true) {
-            System.out.println(bank.money);
+            System.out.println(bank.getMoney());
             Thread.sleep(1000);
         }
     }
-
 }
